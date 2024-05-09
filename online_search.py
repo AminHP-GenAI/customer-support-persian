@@ -7,7 +7,9 @@ from langchain_core.callbacks import CallbackManagerForToolRun
 from llm_translation import translate_to_english, translate_to_persian
 
 
-class PersianTavilySearchResults(TavilySearchResults):
+class PersianTavilySearchTool(TavilySearchResults):
+
+    name: str = 'tavily_search_tool'
 
     llm: BaseChatModel
 

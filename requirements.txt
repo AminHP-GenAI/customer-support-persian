@@ -5,3 +5,4 @@ langchainhub==0.1.15
 chromadb==0.5.0
 langgraph==0.0.44
 tavily-python==0.3.3
+pandas==2.2.2
