@@ -184,7 +184,7 @@ class Agent:
 
     @property
     def tools(self) -> List[BaseTool]:
-        policy_tools = list(self.policy.get_tools().values())
+        policy_tools = list(self.policy.get_tools(self.llm).values())
         flight_tools = list(self.flight_manager.get_tools().values())
         other_tools = [
             PersianTavilySearchTool(max_results=3, llm=self.llm),

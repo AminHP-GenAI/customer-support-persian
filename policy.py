@@ -14,6 +14,9 @@ from langchain_core.embeddings import Embeddings
 from langchain.callbacks.manager import CallbackManagerForToolRun
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
+from langchain_core.language_models import BaseChatModel
+
+from llm_translation import translate_to_persian
 
 
 class FaqWebBaseLoader(WebBaseLoader):
@@ -127,9 +130,9 @@ class Policy:
     def get_relevant_documents(self, query: str) -> Iterator[Document]:
         return self.retriever.invoke(query)
 
-    def get_tools(self) -> Dict[str, BaseTool]:
+    def get_tools(self, llm: BaseChatModel) -> Dict[str, BaseTool]:
         tools = [
-            LookupPolicyTool(policy=self),
+            LookupPolicyTool(policy=self, llm=llm),
         ]
         return {tool.name: tool for tool in tools}
 
@@ -151,11 +154,12 @@ class LookupPolicyTool(BaseTool):
     return_direct: bool = False
 
     policy: Policy
+    llm: BaseChatModel
 
     def _run(
         self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
-        docs = self.policy.get_relevant_documents(query)
+        docs = self.policy.get_relevant_documents(translate_to_persian(query, self.llm))
         return '\n\n'.join([
             f"FAQ_SUBJECT: {doc.metadata['subject']}\n{doc.page_content}"
             for doc in docs
