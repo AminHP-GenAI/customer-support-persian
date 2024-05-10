@@ -233,16 +233,10 @@ class SearchFlightsToolInput(BaseModel):
     departure_airport: Optional[str] = Field(description="should be emprty or the departure airport code")
     arrival_airport: Optional[str] = Field(description="should be emprty or the departure arrival code")
     start_time: Optional[str] = Field(
-        description=
-        # "it must be in the format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm` or empty string, "
-        "must be empty or in iso format, "
-        "specifies date or datetime for search lower band"
+        description="must be empty or in iso format, specifies date or datetime for search lower band"
     )
     end_time: Optional[str] = Field(
-        description=
-        # "it must be in the format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm` or empty string, "
-        "must be empty or in iso format, "
-        "specifies date or datetime for search upper band"
+        description="must be empty or in iso format, specifies date or datetime for search upper band"
     )
     limit: Optional[int] = Field(description="specifies the maximum number of search results")
 

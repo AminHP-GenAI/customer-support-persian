@@ -55,6 +55,9 @@ class ToolMessage(HumanMessage):
             title += f"\nName: {self.name}"
         return f"{title}\n\n{self.content}"
 
+import langchain_core.messages.tool
+langchain_core.messages.tool.ToolMessage = ToolMessage
+
 
 class ToolNode(RunnableCallable):
 
@@ -93,24 +96,32 @@ class State(TypedDict):
 
 
 class Assistant:
-    def __init__(self, runnable: Runnable):
+    def __init__(self, runnable: Runnable, tools: List[BaseTool]):
         self.runnable = runnable
+        self.tools = tools
 
     def __call__(self, state: State, config: RunnableConfig):
         while True:
             result = self.runnable.invoke(state['messages'], config)
             try:
                 content_json = json.loads(result.content)
-                break
             except ValueError:
                 warnings.warn('BAD FORMAT: ' + result.content)
                 state['messages'] += [result, HumanMessage("Respond with a json output!")]
+                continue
 
-        action = content_json.get('ACTION', '').replace(' ', '')
-        action_params = content_json.get('ACTION_PARAMS') or {}
-        if type(action_params) is str:
-            action_params = json.loads(action_params)
-        final_answer = content_json.get('FINAL_ANSWER')
+            action = content_json.get('ACTION', '').replace(' ', '')
+            action_params = content_json.get('ACTION_PARAMS') or {}
+            if type(action_params) is str:
+                action_params = json.loads(action_params)
+            final_answer = content_json.get('FINAL_ANSWER')
+
+            if action and action not in [tool.name for tool in self.tools]:
+                warnings.warn('BAD TOOL NAME: ' + result.content)
+                state['messages'] += [result, HumanMessage(f"The ACTION `{action}` does not exist!")]
+                continue
+
+            break
 
         if action:
             tool_call = ToolCall(name=action, args=action_params, id=str(uuid.uuid4()))
@@ -169,17 +180,21 @@ class Agent:
         self.llm = ChatOllama(model='llama3', num_ctx=8192, num_thread=8, temperature=0.0)
 
         self._graph = self._build_graph()
+        self._printed_messages = set()
 
     @property
     def tools(self) -> List[BaseTool]:
-        return [
+        policy_tools = list(self.policy.get_tools().values())
+        flight_tools = list(self.flight_manager.get_tools().values())
+        other_tools = [
             PersianTavilySearchTool(max_results=3, llm=self.llm),
-        ] + list(self.policy.get_tools().values()) + list(self.flight_manager.get_tools().values())
+        ]
+        return other_tools + policy_tools + flight_tools
 
     def _build_graph(self) -> CompiledGraph:
         builder = StateGraph(State)
 
-        builder.add_node('assistant', Assistant(self.llm))
+        builder.add_node('assistant', Assistant(self.llm, self.tools))
         builder.add_node('action', ToolNode(self.tools))
         builder.set_entry_point('assistant')
         builder.add_conditional_edges(
@@ -223,8 +238,7 @@ class Agent:
         if clear_message_history:
             self._graph.checkpointer.put(config, checkpoint=empty_checkpoint())
 
-        printed_messages = set()
-        messages = []
+        new_messages = []
 
         if clear_message_history:
             system_message = SystemMessage(SYSTEM_PROMPT_TEMPLATE.format(
@@ -232,14 +246,14 @@ class Agent:
                 time=datetime.now(),
                 user_info=f"passenger_id: {config.get('configurable', {}).get('passenger_id', None)}"
             ))
-            messages.append(system_message)
+            new_messages.append(system_message)
 
         user_message = HumanMessage(question)
-        messages.append(user_message)
+        new_messages.append(user_message)
 
         events = self._graph.stream(
-            {'messages': messages}, config, stream_mode='values'
+            {'messages': new_messages}, config, stream_mode='values'
         )
 
         for event in events:
-            self._print_event(event, printed_messages)
+            self._print_event(event, self._printed_messages)
