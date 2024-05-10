@@ -251,7 +251,7 @@ class SearchFlightsTool(BaseTool):
 
     name = 'search_flights_tool'
     description = (
-        "Search for flights based on departure airport, arrival airport, and departure time range.\n"
+        "Search for flights in the database based on departure airport, arrival airport, and departure time range.\n"
         "Returns A list of dictionaries where each dictionary contains the flight details."
     )
     args_schema: Type[BaseModel] = SearchFlightsToolInput
