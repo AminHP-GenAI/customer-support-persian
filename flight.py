@@ -1,6 +1,5 @@
 from typing import List, Dict, Type, Optional
 
-import json
 import pytz
 from datetime import datetime
 
@@ -10,6 +9,7 @@ from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
 
 from database import Database
+from utils import list_of_dict_to_str
 
 
 class FlightManager:
@@ -225,7 +225,7 @@ class FetchUserFlightInformationTool(BaseTool):
             raise ValueError("No `passenger_id` configured.")
 
         results = self.flight_manager.fetch_user_flight_information(passenger_id)
-        return json.dumps(results)
+        return list_of_dict_to_str(results)
 
 
 
@@ -270,13 +270,13 @@ class SearchFlightsTool(BaseTool):
     ) -> str:
         departure_airport = departure_airport or None
         arrival_airport = arrival_airport or None
-        start_time = datetime.fromisoformat(start_time) if start_time else None
-        end_time = datetime.fromisoformat(end_time) if end_time else None
+        start_time = datetime.fromisoformat(start_time.replace('Z', '')) if start_time else None
+        end_time = datetime.fromisoformat(end_time.replace('Z', '')) if end_time else None
 
         results = self.flight_manager.search_flights(
             departure_airport, arrival_airport, start_time, end_time, limit
         )
-        return json.dumps(results)
+        return list_of_dict_to_str(results)
 
 
 
@@ -307,10 +307,10 @@ class UpdateTicketToNewFlightTool(BaseTool):
         if not passenger_id:
             raise ValueError("No `passenger_id` configured.")
 
-        results = self.flight_manager.update_ticket_to_new_flight(
+        result = self.flight_manager.update_ticket_to_new_flight(
             passenger_id, ticket_no, new_flight_id
         )
-        return json.dumps(results)
+        return result
 
 
 
@@ -340,5 +340,5 @@ class CancelTicketTool(BaseTool):
         if not passenger_id:
             raise ValueError("No `passenger_id` configured.")
 
-        results = self.flight_manager.cancel_ticket(passenger_id, ticket_no)
-        return results
+        result = self.flight_manager.cancel_ticket(passenger_id, ticket_no)
+        return result
