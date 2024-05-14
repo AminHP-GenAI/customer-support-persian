@@ -1,15 +1,16 @@
 from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_community.tools.tavily_search import TavilyAnswer
 from langchain_core.callbacks import CallbackManagerForToolRun
 
-from llm_translation import translate_to_english, translate_to_persian
+from llm_translation import translate_to_persian
 
 
-class PersianTavilySearchTool(TavilySearchResults):
+class PersianTavilySearchTool(TavilyAnswer):
 
     name: str = 'tavily_search_tool'
+    max_results: int = 20
 
     llm: BaseChatModel
 
@@ -24,16 +25,13 @@ class PersianTavilySearchTool(TavilySearchResults):
             persian_query = translate_to_persian(query, self.llm)
 
             # Search the Persian query using Tavily API
-            result_list = self.api_wrapper.results(
+            result_text = self.api_wrapper.raw_results(
                 persian_query,
-                self.max_results,
-            )
+                max_results=self.max_results,
+                include_answer=True,
+                search_depth='basic',
+            )['answer']
 
-            # Translate the result back to English
-            # Results are merged into a single text to reduce the number of LLM translation calls
-            result_text = '\n\n'.join([item['content'] for item in result_list])
-            english_result = translate_to_english(result_text, self.llm)
-
-            return english_result
+            return result_text
         except Exception as e:
             return repr(e)

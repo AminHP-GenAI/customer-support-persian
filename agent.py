@@ -18,7 +18,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.graph import END, StateGraph
 from langgraph.graph.graph import CompiledGraph
-from langgraph.prebuilt.tool_node import tools_condition, str_output
+from langgraph.prebuilt.tool_node import tools_condition
 from langgraph.graph.message import add_messages
 
 from database import Database
@@ -81,8 +81,8 @@ class ToolNode(RunnableCallable):
         def run_one(call: ToolCall):
             output = self.tools_by_name[call['name']].invoke(call['args'], config)
             tool_prompt = (
-                "Here is the tool results:\n\n" +
-                str_output(output)
+                "--- TOOL MANAGER ---\n"
+                "Here is the tool results:\n\n" + output
             )
             return ToolMessage(
                 content=tool_prompt, name=call['name'], tool_call_id=call['id']
@@ -104,10 +104,16 @@ class Assistant:
         while True:
             result = self.runnable.invoke(state['messages'], config)
             try:
-                content_json = json.loads(result.content)
-            except ValueError:
+                content = result.content
+                if '{' in content and '}' in content:
+                    start_index = content.index('{')
+                    end_index = content.rindex('}')
+                    content = content[start_index:end_index+1]
+
+                content_json = json.loads(content)
+            except ValueError as e:
                 warnings.warn('BAD FORMAT: ' + result.content)
-                state['messages'] += [result, HumanMessage("Respond with a json output!")]
+                state['messages'] += [result, HumanMessage("Respond with a valid json output!")]
                 continue
 
             action = content_json.get('ACTION', '').replace(' ', '')
@@ -144,6 +150,10 @@ You are a helpful Persian customer support assistant for Iran Airlines.
 Use the provided tools to search for flights, company policies, and other information to assist the user's queries. 
 When searching, be persistent. Expand your query bounds if the first search returns no results. 
 If a search comes up empty, expand your search before giving up.
+
+You are going to have a conversation with two users. The first user is the MAIN USER, 
+who asks questions and needs to be assisted. The second user is our TOOL MANAGER, which 
+runs the requested tools and delivers the tool results.
 
 You have access to the following tools to get more information if needed:
 
@@ -188,7 +198,7 @@ class Agent:
         policy_tools = list(self.policy.get_tools().values())
         flight_tools = list(self.flight_manager.get_tools().values())
         other_tools = [
-            PersianTavilySearchTool(max_results=3, llm=self.llm),
+            PersianTavilySearchTool(max_results=20, llm=self.llm),
         ]
         return other_tools + policy_tools + flight_tools
 
