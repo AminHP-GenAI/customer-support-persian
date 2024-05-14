@@ -74,8 +74,15 @@ class FaqTextSplitter(TextSplitter):
 
 class Policy:
 
-    def __init__(self, data_dir: str, embedding: Embeddings, k: int = 5) -> None:
+    def __init__(
+        self,
+        data_dir: str,
+        llm: BaseChatModel,
+        embedding: Embeddings,
+        k: int = 5
+    ) -> None:
         self.data_dir = data_dir
+        self.llm = llm
         self.embedding = embedding
         self.vectorstore = self.get_or_create_vectorstore()
         self.retriever = self.vectorstore.as_retriever(search_kwargs={'k': k})
@@ -130,9 +137,9 @@ class Policy:
     def get_relevant_documents(self, query: str) -> Iterator[Document]:
         return self.retriever.invoke(query)
 
-    def get_tools(self, llm: BaseChatModel) -> Dict[str, BaseTool]:
+    def get_tools(self) -> Dict[str, BaseTool]:
         tools = [
-            LookupPolicyTool(policy=self, llm=llm),
+            LookupPolicyTool(policy=self),
         ]
         return {tool.name: tool for tool in tools}
 
@@ -154,12 +161,11 @@ class LookupPolicyTool(BaseTool):
     return_direct: bool = False
 
     policy: Policy
-    llm: BaseChatModel
 
     def _run(
         self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
-        docs = self.policy.get_relevant_documents(translate_to_persian(query, self.llm))
+        docs = self.policy.get_relevant_documents(translate_to_persian(query, self.policy.llm))
         return '\n\n'.join([
             f"FAQ_SUBJECT: {doc.metadata['subject']}\n{doc.page_content}"
             for doc in docs

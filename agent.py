@@ -173,18 +173,19 @@ Current time: {time}.
 class Agent:
 
     def __init__(self) -> None:
-        self.database = Database(data_dir="storage/database")
-        self.policy = Policy(data_dir="storage/policy", embedding=OllamaEmbeddings(model='llama3'))
-        self.flight_manager = FlightManager(self.database)
-
         self.llm = ChatOllama(model='llama3', num_ctx=8192, num_thread=8, temperature=0.0)
+        self.embedding = OllamaEmbeddings(model='llama3', num_thread=8, temperature=0.0)
+
+        self.database = Database(data_dir="storage/database")
+        self.policy = Policy(data_dir="storage/policy", llm=self.llm, embedding=self.embedding)
+        self.flight_manager = FlightManager(self.database, self.llm)
 
         self._graph = self._build_graph()
         self._printed_messages = set()
 
     @property
     def tools(self) -> List[BaseTool]:
-        policy_tools = list(self.policy.get_tools(self.llm).values())
+        policy_tools = list(self.policy.get_tools().values())
         flight_tools = list(self.flight_manager.get_tools().values())
         other_tools = [
             PersianTavilySearchTool(max_results=3, llm=self.llm),

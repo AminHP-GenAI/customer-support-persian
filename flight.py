@@ -7,6 +7,7 @@ from langchain_core.runnables import ensure_config
 from langchain.callbacks.manager import CallbackManagerForToolRun
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
+from langchain_core.language_models import BaseChatModel
 
 from database import Database
 from utils import list_of_dict_to_str
@@ -14,8 +15,9 @@ from utils import list_of_dict_to_str
 
 class FlightManager:
 
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: Database, llm: BaseChatModel) -> None:
         self.db = db
+        self.llm = llm
 
     def fetch_user_flight_information(self, passenger_id: str) -> List[Dict]:
         connection = self.db.get_connection()
