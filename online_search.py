@@ -10,6 +10,11 @@ from llm_translation import translate_to_persian
 class PersianTavilySearchTool(TavilyAnswer):
 
     name: str = 'tavily_search_tool'
+    description: str = (
+        "A search engine optimized for comprehensive, accurate, and trusted results. "
+        "Useful for when you need to answer questions about current events like weather conditions, etc. "
+        "Input should be a search query."
+    )
     max_results: int = 20
 
     llm: BaseChatModel
