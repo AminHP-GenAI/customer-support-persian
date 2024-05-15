@@ -11,7 +11,7 @@ from langchain_community.embeddings import OllamaEmbeddings
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage, AnyMessage, ToolCall
 from langchain_core.messages.base import get_msg_title_repr
 from langchain_core.tools import BaseTool
-from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.runnables import Runnable, RunnableConfig, RunnableLambda
 
 from langgraph.utils import RunnableCallable
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -202,11 +202,29 @@ class Agent:
         ]
         return other_tools + policy_tools + flight_tools
 
+    def _handle_tool_error(self, state: State) -> Dict:
+        error = state.get('error')
+        tool_call = state['messages'][-1].tool_calls[0]
+        return {
+            'messages': ToolMessage(
+                content=(
+                    "--- TOOL MANAGER ---\n"
+                    f"Error: {repr(error)}\n please fix your mistakes."
+                ),
+                tool_call_id=tool_call['id'],
+            )
+        }
+
+    def _create_tool_node_with_fallback(self, tools: List[BaseTool]) -> Dict:
+        return ToolNode(tools).with_fallbacks(
+            [RunnableLambda(self._handle_tool_error)], exception_key='error'
+        )
+
     def _build_graph(self) -> CompiledGraph:
         builder = StateGraph(State)
 
         builder.add_node('assistant', Assistant(self.llm, self.tools))
-        builder.add_node('action', ToolNode(self.tools))
+        builder.add_node('action', self._create_tool_node_with_fallback(self.tools))
         builder.set_entry_point('assistant')
         builder.add_conditional_edges(
             'assistant',
