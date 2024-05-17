@@ -224,7 +224,8 @@ class Agent:
         builder = StateGraph(State)
 
         builder.add_node('assistant', Assistant(self.llm, self.tools))
-        builder.add_node('action', self._create_tool_node_with_fallback(self.tools))
+        # builder.add_node('action', self._create_tool_node_with_fallback(self.tools))
+        builder.add_node('action', ToolNode(self.tools))
         builder.set_entry_point('assistant')
         builder.add_conditional_edges(
             'assistant',
