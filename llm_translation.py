@@ -2,9 +2,11 @@ from langchain_core.language_models import BaseChatModel
 
 
 def translate_to_english(text: str, llm: BaseChatModel) -> str:
-    return llm.invoke(
-        "Translate the following text to English without adding any notes:\n\n" + text
+    raw_result = llm.invoke(
+        "Translate the following Persian text to English (put the translated text inside {}):\n\n" + text
     ).content
+    result = raw_result[raw_result.index('{')+1:raw_result.rindex('}')]
+    return result
 
 
 def translate_to_persian(text: str, llm: BaseChatModel) -> str:
