@@ -50,7 +50,7 @@ class Database:
         example_time = pd.to_datetime(
             tdf['flights']['actual_departure'].replace('\\N', pd.NaT)
         ).max()
-        current_time = pd.to_datetime('now').tz_localize(example_time.tz)
+        current_time = pd.to_datetime('now', utc=True).tz_convert(example_time.tz)
         time_diff = current_time - example_time
 
         tdf['bookings']['book_date'] = (

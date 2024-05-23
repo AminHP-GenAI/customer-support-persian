@@ -1,3 +1,6 @@
+import os
+import sys
+
 from PIL import Image as pil_image
 
 from langchain_core.language_models import BaseChatModel
@@ -115,4 +118,10 @@ class PersianTextToSpeech:
     def invoke(self, text: str, output_file_path: str) -> None:
         if not output_file_path.endswith('.wav'):
             output_file_path += '.wav'
+
+        stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
         self.model.tts_to_file(text, file_path=output_file_path)
+
+        sys.stdout = stdout
