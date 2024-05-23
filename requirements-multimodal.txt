@@ -3,3 +3,7 @@ torch==2.3.0
 bitsandbytes==0.43.1
 autoawq==0.2.5
 pillow==10.3.0
+hezar==0.37.0
+TTS==0.22.0
+
+# sudo apt-get -y install espeak-ng
