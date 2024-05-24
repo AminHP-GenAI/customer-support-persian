@@ -14,22 +14,29 @@ from TTS.api import TTS as _TTS
 from llm_translation import translate_to_english
 
 
+# IMAGE_INFORMATION_EXTRACTOR_PROMPT = \
+# """
+# As an image information extractor assistant, extract all the information
+# from this image and return it. Then select some parts from the latter information
+# that could be more relevant to the following text:
+
+# {text}
+
+# Your response must be in the following format:
+
+# ### PART 1: ALL INFORMATION ###
+# ...
+
+# ### PART 2: MORE RELEVANT INFORMATION TO THE TEXT ###
+# ...
+
+# """
+
+
 IMAGE_INFORMATION_EXTRACTOR_PROMPT = \
 """
 As an image information extractor assistant, extract all the information
-from this image and return it. Then select some parts from the latter information
-that could be more relevant to the following text:
-
-{text}
-
-Your response must be in the following format:
-
-### PART 1: ALL INFORMATION ###
-...
-
-### PART 2: MORE RELEVANT INFORMATION TO THE TEXT ###
-...
-
+from this image and return it.
 """
 
 class ImageInformationExtractor:
@@ -119,9 +126,12 @@ class PersianTextToSpeech:
         if not output_file_path.endswith('.wav'):
             output_file_path += '.wav'
 
-        stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
+        try:
+            stdout = sys.stdout
+            sys.stdout = open(os.devnull, 'w')
 
-        self.model.tts_to_file(text, file_path=output_file_path)
-
-        sys.stdout = stdout
+            self.model.tts_to_file(text, file_path=output_file_path)
+        except Exception as e:
+            raise e
+        finally:
+            sys.stdout = stdout
